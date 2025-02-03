@@ -14,7 +14,7 @@ def load_data_from_bq():
     
     query = f"""
         SELECT size, bedrooms, price
-        FROM `${{ secrets.GCP_PROJECT_ID }}.housing_data.housing_table`
+        FROM `sixth-utility-449722-p8.housing_data.housing_table`
     """
     return client.query(query).to_dataframe()
 
