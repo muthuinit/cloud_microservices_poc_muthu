@@ -15,21 +15,15 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v2
 
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v0.4.0
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
         with:
-          version: "latest"
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
           credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
 
-      - name: Write Service Account Key to File
-        run: |
-          echo "${{ secrets.GCP_CREDENTIALS_JSON }}" > service-account-key.json
-
-      - name: Authenticate gcloud and bq
-        run: |
-          gcloud auth activate-service-account --key-file=service-account-key.json
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Load data into BigQuery
         run: |
