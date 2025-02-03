@@ -22,11 +22,16 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
 
+      - name: Authenticate gcloud and bq
+        run: |
+          gcloud auth activate-service-account --key-file=${{ secrets.GCP_CREDENTIALS_JSON }}
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
       - name: Load data into BigQuery
         run: |
           bq load --source_format=CSV \
               ${{ secrets.GCP_PROJECT_ID }}:housing_data.housing_table \
-              gs://housing-data-bucket/housing_data.csv \
+              gs://housing-data-bucket-poc/housing_data.csv \
               size:FLOAT,bedrooms:INTEGER,price:FLOAT
 
       - name: Set up Python environment
@@ -45,7 +50,7 @@ jobs:
 
       - name: Save Model to Cloud Storage
         run: |
-          gsutil cp model.pkl gs://mlops-poc-bucket/models/
+          gsutil cp model.pkl gs://housing-data-bucket-poc/models/
 
       - name: Authenticate Docker to GCR
         run: |
