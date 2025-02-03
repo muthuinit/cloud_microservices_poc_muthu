@@ -42,7 +42,7 @@ def save_model_to_gcs(model):
     joblib.dump(model, "model.pkl")
 
     client = storage.Client()
-    bucket = client.bucket("mlops-poc-bucket")
+    bucket = client.bucket("housing-data-bucket-poc")
     blob = bucket.blob("models/model.pkl")
     blob.upload_from_filename("model.pkl")
 
