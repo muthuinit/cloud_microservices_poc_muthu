@@ -11,41 +11,50 @@ jobs:
   train_and_build:
     runs-on: ubuntu-latest
     steps:
-    
-    - name: Checkout the code
-      uses: actions/checkout@v2
 
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.4.0
-      with:
-        version: "latest"
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-        credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
+      - name: Checkout the code
+        uses: actions/checkout@v2
 
-    - name: Load data into BigQuery
-       run:bq load --source_format=CSV sixth-utility-449722-p8:housing_data.housing_table gs://housing-data-bucket/housing_data.csv size:FLOAT,bedrooms:INTEGER,price:FLOAT
-          
-    - name: Set up Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0.4.0
+        with:
+          version: "latest"
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: Load data into BigQuery
+        run: |
+          bq load --source_format=CSV \
+              ${{ secrets.GCP_PROJECT_ID }}:housing_data.housing_table \
+              gs://housing-data-bucket/housing_data.csv \
+              size:FLOAT,bedrooms:INTEGER,price:FLOAT
 
-    - name: Train the Model
-      run: |
-        python train_model.py
+      - name: Set up Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
 
-    - name: Save Model to Cloud Storage
-      run: |
-        gsutil cp model.pkl gs://mlops-poc-bucket/models/
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: Build Docker Image
-      run: |
-        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest .
-    
-    - name: Push Docker Image to GCR
-      run: |
-        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest
+      - name: Train the Model
+        run: |
+          python train_model.py
+
+      - name: Save Model to Cloud Storage
+        run: |
+          gsutil cp model.pkl gs://mlops-poc-bucket/models/
+
+      - name: Authenticate Docker to GCR
+        run: |
+          gcloud auth configure-docker
+
+      - name: Build Docker Image
+        run: |
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest .
+
+      - name: Push Docker Image to GCR
+        run: |
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest
