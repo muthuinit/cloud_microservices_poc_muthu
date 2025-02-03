@@ -5,6 +5,8 @@ on:
     branches:
       - main  # Trigger CI when code is pushed to the main branch
 
+  workflow_dispatch:
+
 jobs:
   train_and_build:
     runs-on: ubuntu-latest
