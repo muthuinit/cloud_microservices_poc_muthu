@@ -23,8 +23,8 @@ jobs:
         credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
 
     - name: Load data into BigQuery
-        run: bq load --source_format=CSV ${{ secrets.GCP_PROJECT_ID }}:housing_data.housing_table gs://mlops-poc-bucket/housing_data.csv size:FLOAT,bedrooms:INTEGER,price:FLOAT
-
+        run: |
+          bq load --source_format=CSV sixth-utility-449722-p8:housing_data.housing_table gs://housing-data-bucket/housing_data.csv size:FLOAT,bedrooms:INTEGER,price:FLOAT
     - name: Set up Python environment
       uses: actions/setup-python@v2
       with:
