@@ -21,6 +21,9 @@ jobs:
         version: "latest"
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
+    - name: Load data into BigQuery
+        run: |
+          bq load --source_format=CSV ${{ secrets.GCP_PROJECT_ID }}:housing_data.housing_table gs://mlops-poc-bucket/housing_data.csv size:FLOAT,bedrooms:INTEGER,price:FLOAT
 
     - name: Set up Python environment
       uses: actions/setup-python@v2
