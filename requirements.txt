@@ -1,0 +1,19 @@
+# Google Cloud SDK dependencies
+google-cloud-storage==2.16.0
+google-cloud-bigquery==3.22.0
+google-cloud-aiplatform==1.40.0
+
+# Machine Learning dependencies
+numpy==1.26.4
+pandas==2.2.1
+scikit-learn==1.4.1.post1
+joblib==1.3.2
+
+# Web API for serving the model
+flask==3.0.2
+gunicorn==21.2.0
+
+# Additional dependencies (optional but useful)
+google-auth==2.27.0
+google-auth-oauthlib==1.2.0
+protobuf==4.25.3
