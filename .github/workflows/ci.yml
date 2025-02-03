@@ -29,7 +29,7 @@ jobs:
         run: |
           bq load --source_format=CSV \
               ${{ secrets.GCP_PROJECT_ID }}:housing_data.housing_table \
-              gs://housing-data-bucket/housing_data.csv \
+              gs://housing-data-bucket-poc/housing_data.csv \
               size:FLOAT,bedrooms:INTEGER,price:FLOAT
 
       - name: Set up Python environment
