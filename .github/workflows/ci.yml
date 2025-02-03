@@ -3,7 +3,7 @@ name: CI - Train Model & Build Docker Image
 on:
   push:
     branches:
-      - main  # Trigger CI when code is pushed to the main branch
+      - master  # Trigger CI when code is pushed to the main branch
 
   workflow_dispatch:
 
