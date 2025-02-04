@@ -21,14 +21,7 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-
-      - name: Load data into BigQuery
-        run: |
-          bq load --source_format=CSV --skip_leading_rows=1 \
-              ${{ secrets.GCP_PROJECT_ID }}:housing_data.housing_table \
-              gs://housing-data-bucket-poc/housing_data.csv \
-              size:FLOAT,bedrooms:INTEGER,location:STRING,price:FLOAT
+          project_id: sixth-utility-449722-p8
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -38,19 +31,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install db-dtypes
+          pip install google-cloud-storage google-cloud-bigquery scikit-learn joblib
 
       - name: Train the model
         run: |
           python train_model.py
-
-      - name: Debug - List /tmp directory
-        run: |
-          ls -l /tmp
-
-      - name: Upload Model Artifacts to GCS
-        run: |
-          gsutil cp /tmp/model.pkl gs://housing-data-bucket-poc/model_registry/
 
       - name: Upload Model to Vertex AI Model Registry
         run: |
@@ -58,7 +43,7 @@ jobs:
             --region=us-central1 \
             --display-name=house-price-model \
             --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-0:latest \
-            --artifact-uri=gs://housing-data-bucket-poc/model_registry/
+            --artifact-uri=gs://housing-data-bucket-poc/model_registry/model.pkl
 
       - name: Create Vertex AI Endpoint
         run: |

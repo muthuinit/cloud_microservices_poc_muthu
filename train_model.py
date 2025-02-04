@@ -6,22 +6,18 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from google.cloud import bigquery, storage
-from google.api_core.exceptions import GoogleAPICallError
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Environment Variables
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "sixth-utility-449722-p8")
-DATASET_ID = os.getenv("BQ_DATASET_ID", "housing_data")
-TABLE_ID = os.getenv("BQ_TABLE_ID", "housing_table")
-BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "housing-data-bucket-poc")
-MODEL_BUCKET_PATH = f"gs://{BUCKET_NAME}/models"
-MODEL_REGISTRY_PATH = f"gs://{BUCKET_NAME}/model_registry"
+PROJECT_ID = "sixth-utility-449722-p8"
+DATASET_ID = "housing_data"
+TABLE_ID = "housing_table"
+BUCKET_NAME = "housing-data-bucket-poc"
 MODEL_DIR = "/tmp"
-MODEL_PATH = f"{MODEL_DIR}/model.pkl"  # Static filename
-MODEL_BLOB = "models/latest_model.pkl"
+MODEL_PATH = f"{MODEL_DIR}/model.pkl"
 
 # Initialize Clients
 client_bq = bigquery.Client()
@@ -36,7 +32,7 @@ def load_data_from_bq():
     try:
         logger.info(f"Loading data from BigQuery table: {TABLE_ID}")
         return client_bq.query(query).to_dataframe()
-    except GoogleAPICallError as e:
+    except Exception as e:
         logger.error(f"BigQuery Data Load Error: {e}")
         raise
 
@@ -54,38 +50,17 @@ def train_model(data):
     return model
 
 def save_model_to_gcs(model):
-    """Save trained model to GCS and Model Registry."""
+    """Save trained model to GCS."""
     os.makedirs(MODEL_DIR, exist_ok=True)
-    
-    # Save the model with a static filename
-    local_path = f"{MODEL_DIR}/model.pkl"
-    joblib.dump(model, local_path)
+    joblib.dump(model, MODEL_PATH)
     
     # Upload to GCS
     bucket = client_gcs.bucket(BUCKET_NAME)
-    blob = bucket.blob("models/model.pkl")
-    blob.upload_from_filename(local_path)
-    logger.info(f"Model saved to GCS: {MODEL_BUCKET_PATH}/model.pkl")
-    
-    # Save to Model Registry
-    registry_blob = bucket.blob("model_registry/model.pkl")
-    registry_blob.upload_from_filename(local_path)
-    logger.info(f"Model also saved to Model Registry: {MODEL_REGISTRY_PATH}/model.pkl")
-
-def load_model():
-    """Load the latest model from GCS into the container."""
-    os.makedirs(MODEL_DIR, exist_ok=True)  # Ensure directory exists
-    bucket = client_gcs.bucket(BUCKET_NAME)
-    blob = bucket.blob(MODEL_BLOB)
-    
-    if not blob.exists():
-        raise FileNotFoundError(f"Model file not found in GCS: gs://{BUCKET_NAME}/{MODEL_BLOB}")
-    
-    blob.download_to_filename(MODEL_PATH)
-    return joblib.load(MODEL_PATH)
+    blob = bucket.blob("model_registry/model.pkl")
+    blob.upload_from_filename(MODEL_PATH)
+    logger.info(f"Model saved to GCS: gs://{BUCKET_NAME}/model_registry/model.pkl")
 
 if __name__ == "__main__":
     data = load_data_from_bq()
     model = train_model(data)
     save_model_to_gcs(model)
-    logger.info("Model training completed. Saved as model.pkl")

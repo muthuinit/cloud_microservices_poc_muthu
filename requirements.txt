@@ -1,7 +1,5 @@
-flask
-pandas
-scikit-learn
-google-cloud-bigquery
 google-cloud-storage
+google-cloud-bigquery
+scikit-learn
 joblib
-gunicorn
+pandas
