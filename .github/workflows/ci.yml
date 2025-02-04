@@ -28,7 +28,7 @@ jobs:
           bq load --source_format=CSV --skip_leading_rows=1 \
               ${{ secrets.GCP_PROJECT_ID }}:housing_data.housing_table \
               gs://housing-data-bucket-poc/housing_data.csv \
-              size:FLOAT,bedrooms:INTEGER,price:FLOAT
+              size:FLOAT,bedrooms:INTEGER,location:STRING,price:FLOAT
 
       - name: Set up Python
         uses: actions/setup-python@v2
