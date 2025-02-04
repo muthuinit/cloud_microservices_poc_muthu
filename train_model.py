@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # GCP configuration
 GCP_PROJECT_ID = os.getenv("sixth-utility-449722-p8")
 GCS_BUCKET_NAME = os.getenv("housing-data-bucket-poc")
-BQ_DATASET = os.getenv("housing_data")
+BQ_DATASET = os.getenv("sixth-utility-449722-p8.housing_data")
 MODEL_FILENAME = "house_price_model.pkl"
 
 def load_data_from_bigquery():
