@@ -26,7 +26,7 @@ jobs:
           gcloud ai models upload \
             --region=us-central1 \
             --display-name=house-price-model \
-            --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/scikit-learn-cpu.1-2:latest \
+            --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.2-6:latest \
             --artifact-uri=gs://housing-data-bucket-poc/model_registry/
 
       - name: Create Vertex AI Endpoint
@@ -37,8 +37,8 @@ jobs:
 
       - name: Deploy Model to Vertex AI Endpoint
         run: |
-          MODEL_ID=$(gcloud ai models list --region=us-central1 --filter="displayName=house-price-model" --format="value(MODEL_ID)")
-          ENDPOINT_ID=$(gcloud ai endpoints list --region=us-central1 --filter="displayName=house-price-endpoint" --format="value(ENDPOINT_ID)")
+          MODEL_ID=$(gcloud ai models list --region=us-central1 --filter="displayName=house-price-model" --format="value(MODEL_ID)" | head -n 1)
+          ENDPOINT_ID=$(gcloud ai endpoints list --region=us-central1 --filter="displayName=house-price-endpoint" --format="value(ENDPOINT_ID)" | head -n 1)
 
           echo "MODEL_ID: $MODEL_ID"
           echo "ENDPOINT_ID: $ENDPOINT_ID"
