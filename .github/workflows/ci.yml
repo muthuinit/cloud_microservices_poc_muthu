@@ -1,6 +1,9 @@
 name: CI - QA Validations and Training
 
 on:
+  push:
+    branches:
+      - master
   workflow_dispatch:
 
 jobs:
