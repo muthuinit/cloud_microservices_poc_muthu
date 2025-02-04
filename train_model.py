@@ -2,7 +2,6 @@ import os
 import logging
 import joblib
 import pandas as pd
-from datetime import datetime
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
@@ -21,7 +20,7 @@ BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "housing-data-bucket-poc")
 MODEL_BUCKET_PATH = f"gs://{BUCKET_NAME}/models"
 MODEL_REGISTRY_PATH = f"gs://{BUCKET_NAME}/model_registry"
 MODEL_DIR = "/tmp"
-MODEL_PATH = f"{MODEL_DIR}/model.pkl"
+MODEL_PATH = f"{MODEL_DIR}/model.pkl"  # Static filename
 MODEL_BLOB = "models/latest_model.pkl"
 
 # Initialize Clients
@@ -57,21 +56,21 @@ def train_model(data):
 def save_model_to_gcs(model):
     """Save trained model to GCS and Model Registry."""
     os.makedirs(MODEL_DIR, exist_ok=True)
-    model_filename = f"model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pkl"
-    local_path = f"{MODEL_DIR}/{model_filename}"
+    
+    # Save the model with a static filename
+    local_path = f"{MODEL_DIR}/model.pkl"
     joblib.dump(model, local_path)
     
+    # Upload to GCS
     bucket = client_gcs.bucket(BUCKET_NAME)
-    blob = bucket.blob(f"models/{model_filename}")
+    blob = bucket.blob("models/model.pkl")
     blob.upload_from_filename(local_path)
-    logger.info(f"Model saved to GCS: {MODEL_BUCKET_PATH}/{model_filename}")
+    logger.info(f"Model saved to GCS: {MODEL_BUCKET_PATH}/model.pkl")
     
     # Save to Model Registry
-    registry_blob = bucket.blob(f"model_registry/{model_filename}")
+    registry_blob = bucket.blob("model_registry/model.pkl")
     registry_blob.upload_from_filename(local_path)
-    logger.info(f"Model also saved to Model Registry: {MODEL_REGISTRY_PATH}/{model_filename}")
-    
-    return model_filename
+    logger.info(f"Model also saved to Model Registry: {MODEL_REGISTRY_PATH}/model.pkl")
 
 def load_model():
     """Load the latest model from GCS into the container."""
@@ -88,5 +87,5 @@ def load_model():
 if __name__ == "__main__":
     data = load_data_from_bq()
     model = train_model(data)
-    model_filename = save_model_to_gcs(model)
-    logger.info(f"Model training completed. Saved as {model_filename}")
+    save_model_to_gcs(model)
+    logger.info("Model training completed. Saved as model.pkl")
