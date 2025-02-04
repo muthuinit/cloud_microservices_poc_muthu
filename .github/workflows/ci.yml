@@ -50,3 +50,14 @@ jobs:
         run: |
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest .
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest
+
+      - name: Deploy to Workbench for Testing
+        run: |
+           gcloud compute instances create-with-container workbench-qa-instance \
+            --container-image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest \
+            --zone=us-central1-a
+
+      - name: Upload Model Artifacts to Model Registry
+        run: |
+           gsutil cp gs://housing-data-bucket-poc/models/* gs://housing-data-bucket-poc/model_registry/
+
