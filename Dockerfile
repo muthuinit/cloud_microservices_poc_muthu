@@ -1,24 +1,20 @@
-# Use Python 3.10 slim image
+# Use Python base image
 FROM python:3.10-slim
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
-# Set working directory
+# Set the working directory
 WORKDIR /app
 
-# Copy requirements file
+# Copy dependencies
 COPY requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# Copy the application files
 COPY . .
 
-# Expose the port
+# Expose the application port
 EXPOSE 8080
 
-# Run the application
+# Run the Flask application
 CMD ["python", "train_model.py"]

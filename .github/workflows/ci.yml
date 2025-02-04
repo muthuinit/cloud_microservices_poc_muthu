@@ -3,16 +3,14 @@ name: CI - Train Model & Build Docker Image
 on:
   push:
     branches:
-      - master  # Trigger CI when code is pushed to the main branch
-
+      - master
   workflow_dispatch:
 
 jobs:
   train_and_build:
     runs-on: ubuntu-latest
     steps:
-
-      - name: Checkout the code
+      - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Authenticate to Google Cloud
@@ -30,48 +28,25 @@ jobs:
           bq load --source_format=CSV --skip_leading_rows=1 \
               ${{ secrets.GCP_PROJECT_ID }}:housing_data.housing_table \
               gs://housing-data-bucket-poc/housing_data.csv \
-              size:FLOAT,bedrooms:INTEGER,location:STRING,price:FLOAT
+              size:FLOAT,bedrooms:INTEGER,price:FLOAT
 
-      - name: Set up Python environment
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.9
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install db-dtypes
 
-      - name: Train the Model
-        run: |
-          python train_model.py
+      - name: Train the model
+        run: python train_model.py
 
       - name: Authenticate Docker to GCR
-        run: |
-          gcloud auth configure-docker
+        run: gcloud auth configure-docker
 
-      - name: Build Docker Image
+      - name: Build and Push Docker Image
         run: |
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest .
-
-      - name: Push Docker Image to GCR
-        run: |
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy mlops-api \
-              --image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest \
-              --platform=managed \
-              --region=us-central1 \
-              --allow-unauthenticated
-
-      - name: Rollback on Failure
-        if: failure()
-        run: |
-          gcloud run services update-traffic mlops-api \
-              --to-latest \
-              --platform=managed \
-              --region=us-central1
-    
