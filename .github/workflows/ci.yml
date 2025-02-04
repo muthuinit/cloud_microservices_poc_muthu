@@ -46,6 +46,7 @@ jobs:
           python train_model.py > train_output.txt
           echo "MODEL_FILENAME=$(grep 'Model training completed. Saved as' train_output.txt | awk '{print $NF}')" >> $GITHUB_ENV
           echo "Captured MODEL_FILENAME: $MODEL_FILENAME"  # Debugging line
+          cat train_output.txt  # Debugging line to print the entire log output
 
       - name: Debug - List /tmp directory
         run: |
