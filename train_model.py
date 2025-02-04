@@ -22,7 +22,7 @@ def load_data_from_bigquery():
     client = bigquery.Client(project=GCP_PROJECT_ID)
     query = f"""
         SELECT *
-        FROM `{BQ_DATASET}.housing_data`
+        FROM `{BQ_DATASET}.housing_table`
     """
     logger.info("Loading housing data from BigQuery...")
     df = client.query(query).to_dataframe()
