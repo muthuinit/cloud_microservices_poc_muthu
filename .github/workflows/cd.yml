@@ -26,7 +26,7 @@ jobs:
           gcloud ai models upload \
             --region=us-central1 \
             --display-name=house-price-model \
-            --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.2-6:latest \
+            --container-image-uri=gcr.io/sixth-utility-449722-p8/custom-sklearn-image:latest \
             --artifact-uri=gs://housing-data-bucket-poc/model_registry/
 
       - name: Create Vertex AI Endpoint
