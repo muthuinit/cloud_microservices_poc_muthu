@@ -32,6 +32,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install google-cloud-storage google-cloud-bigquery scikit-learn joblib
+          pip install db-types
 
       - name: Train the model
         run: |
