@@ -1,18 +1,21 @@
 # Use Python 3.10 slim image
 FROM python:3.10-slim
 
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Set working directory
 WORKDIR /app
 
-# Copy the requirements.txt and install dependencies
+# Copy requirements file
 COPY requirements.txt .
+
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the app and model file into the container
-COPY train_model.py .
-COPY model.pkl .
+# Copy the rest of the application code
+COPY . .
 
-# Expose the correct port for Cloud Run
-EXPOSE 8080
-
-# Use Gunicorn to serve the Flask app in production mode
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "train_model:app"]
+# Run the training script
+CMD ["python", "train_model.py"]

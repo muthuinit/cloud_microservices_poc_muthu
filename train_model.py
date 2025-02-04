@@ -1,78 +1,90 @@
 import os
-import joblib
-import numpy as np
-from flask import Flask, request, jsonify
-from google.cloud import bigquery
-from sklearn.ensemble import RandomForestRegressor
+import logging
+import pandas as pd
+from google.cloud import bigquery, storage
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+import joblib
 
-# Initialize Flask app
-app = Flask(__name__)
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Load the trained model (if it already exists in the container)
-model = None
+# GCP configuration
+GCP_PROJECT_ID = os.getenv("sixth-utility-449722-p8")
+GCS_BUCKET_NAME = os.getenv("housing-data-bucket-poc")
+BQ_DATASET = os.getenv("housing_data")
+MODEL_FILENAME = "house_price_model.pkl"
 
-# Load data from BigQuery
-def load_data_from_bq():
-    client = bigquery.Client()
-    
-    # Get Project ID from environment variable
-    project_id = os.environ.get("GCP_PROJECT")  # Ensure this is set in your Cloud Run service
-    
+def load_data_from_bigquery():
+    """Load housing data from BigQuery."""
+    client = bigquery.Client(project=GCP_PROJECT_ID)
     query = f"""
-        SELECT size, bedrooms, price
-        FROM `sixth-utility-449722-p8.housing_data.housing_table`
+        SELECT *
+        FROM `{BQ_DATASET}.housing_data`
     """
-    return client.query(query).to_dataframe()
+    logger.info("Loading housing data from BigQuery...")
+    df = client.query(query).to_dataframe()
+    return df
 
-# Train and save the model (if not already trained and saved)
-def train_model():
-    data = load_data_from_bq()
-    X = data[["size", "bedrooms"]]
-    y = data["price"]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-    model = RandomForestRegressor()
+def preprocess_data(df):
+    """Preprocess the housing data."""
+    logger.info("Preprocessing data...")
+    # Drop rows with missing values
+    df = df.dropna()
+    # Separate features and target
+    X = df.drop("price", axis=1)  # Assuming 'price' is the target column
+    y = df["price"]
+    return X, y
+
+def train_model(X, y):
+    """Train a regression model for house price prediction."""
+    logger.info("Training model...")
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train a RandomForestRegressor
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
-    # Save the trained model using joblib
-    joblib.dump(model, "model.pkl")
+
     # Evaluate the model
     y_pred = model.predict(X_test)
     mse = mean_squared_error(y_test, y_pred)
-    print(f"Model training completed. MSE: {mse}")
+    r2 = r2_score(y_test, y_pred)
+    logger.info(f"Model Mean Squared Error: {mse:.2f}")
+    logger.info(f"Model R^2 Score: {r2:.2f}")
+
     return model
 
-# Load the model into memory when the app starts
-def load_model():
-    global model
-    try:
-        model = joblib.load("model.pkl")
-        print("Model loaded successfully")
-    except Exception as e:
-        print("Model not found, training the model now...")
-        model = train_model()
+def save_model_to_gcs(model, filename):
+    """Save the trained model to Google Cloud Storage."""
+    client = storage.Client(project=GCP_PROJECT_ID)
+    bucket = client.bucket(GCS_BUCKET_NAME)
+    blob = bucket.blob(filename)
 
-# Prediction endpoint
-@app.route('/predict', methods=['POST'])
-def predict():
-    if model is None:
-        return jsonify({"error": "Model is not loaded"}), 500
-    
-    # Get input data from the request
-    data = request.get_json(force=True)
-    size = data['size']
-    bedrooms = data['bedrooms']
-    
-    # Make prediction
-    prediction = model.predict([[size, bedrooms]])
-    
-    # Return prediction as JSON
-    return jsonify({"predicted_price": prediction[0]})
+    # Save the model locally first
+    local_path = f"/tmp/{filename}"
+    joblib.dump(model, local_path)
 
-# Initialize the model on startup
-load_model()
+    # Upload to GCS
+    logger.info(f"Saving model to GCS: gs://{GCS_BUCKET_NAME}/housing_data.csv")
+    blob.upload_from_filename(local_path)
 
-# Run Flask server
+def main():
+    # Load data from BigQuery
+    df = load_data_from_bigquery()
+
+    # Preprocess the data
+    X, y = preprocess_data(df)
+
+    # Train the model
+    model = train_model(X, y)
+
+    # Save the model to GCS
+    save_model_to_gcs(model, MODEL_FILENAME)
+
+    logger.info("House price prediction model training and saving completed!")
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))  # Default to 8080
-    app.run(host='0.0.0.0', port=port)
+    main()
