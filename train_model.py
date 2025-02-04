@@ -20,7 +20,7 @@ TABLE_ID = os.getenv("BQ_TABLE_ID", "housing_table")
 BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "housing-data-bucket-poc")
 MODEL_BUCKET_PATH = f"gs://{BUCKET_NAME}/models"
 MODEL_REGISTRY_PATH = f"gs://{BUCKET_NAME}/model_registry"
-MODEL_DIR = "/app"
+MODEL_DIR = "/tmp"
 MODEL_PATH = f"{MODEL_DIR}/model.pkl"
 MODEL_BLOB = "models/latest_model.pkl"
 
