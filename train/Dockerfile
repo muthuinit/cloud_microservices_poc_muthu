@@ -1,5 +1,5 @@
 # Use the official Scikit-learn image from Vertex AI
-FROM us-docker.pkg.dev/vertex-ai/training/scikit-learn-cpu.1-0:latest
+FROM gcr.io/deeplearning-platform-release/sklearn-cpu.2-6:latest
 
 # Copy the training script and requirements
 COPY train_model.py /train_model.py
