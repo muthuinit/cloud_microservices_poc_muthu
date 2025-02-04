@@ -21,6 +21,13 @@ jobs:
         with:
           project_id: sixth-utility-449722-p8
 
+      - name: Build and Push Docker Image
+        run: |
+            cd deploy
+            gcloud auth configure-docker
+            docker build -t gcr.io/sixth-utility-449722-p8/custom-sklearn-image:latest .
+            docker push gcr.io/sixth-utility-449722-p8/custom-sklearn-image:latest
+
       - name: Upload Model to Vertex AI Model Registry
         run: |
           gcloud ai models upload \
