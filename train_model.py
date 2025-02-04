@@ -3,12 +3,12 @@ import logging
 import joblib
 import pandas as pd
 from datetime import datetime
+from flask import Flask, request, jsonify
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from google.cloud import bigquery, storage
 from google.api_core.exceptions import GoogleAPICallError
-from flask import Flask, request, jsonify
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +27,6 @@ client_gcs = storage.Client(project=PROJECT_ID)
 # Initialize Flask app
 app = Flask(__name__)
 
-# Load data from BigQuery
 def load_data_from_bq():
     """Load housing data from BigQuery."""
     try:
@@ -43,7 +42,6 @@ def load_data_from_bq():
         logger.error(f"Failed to load data from BigQuery: {e}")
         raise
 
-# Train the model
 def train_model(data):
     """Train a RandomForestRegressor model."""
     try:
@@ -69,7 +67,6 @@ def train_model(data):
         logger.error(f"Failed to train model: {e}")
         raise
 
-# Save the trained model to Google Cloud Storage
 def save_model_to_gcs(model):
     """Save the trained model to Google Cloud Storage."""
     try:
@@ -83,27 +80,14 @@ def save_model_to_gcs(model):
         blob.upload_from_filename(model_filename)
 
         logger.info(f"Model successfully saved to GCS at gs://{BUCKET_NAME}/models/{model_filename}")
+        return model_filename
     except GoogleAPICallError as e:
         logger.error(f"Failed to save model to GCS: {e}")
         raise
 
-# Define prediction endpoint
-@app.route('/predict', methods=['POST'])
-def predict():
-    """Endpoint to make predictions using the trained model."""
-    if model is None:
-        return jsonify({"error": "Model not loaded"}), 500
-    
-    data = request.get_json(force=True)
-    size = data['size']
-    bedrooms = data['bedrooms']
-    
-    # Make prediction
-    prediction = model.predict([[size, bedrooms]])
-    return jsonify({"predicted_price": prediction[0]})
-
-# Main entry point
-if __name__ == "__main__":
+@app.route("/train", methods=["POST"])
+def train():
+    """HTTP endpoint to trigger model training."""
     try:
         # Load data from BigQuery
         data = load_data_from_bq()
@@ -112,10 +96,18 @@ if __name__ == "__main__":
         model = train_model(data)
 
         # Save the trained model to Cloud Storage
-        save_model_to_gcs(model)
+        model_filename = save_model_to_gcs(model)
 
-        # Start Flask app and bind to port 8080
-        port = int(os.environ.get("PORT", 8080))  # Default to 8080
-        app.run(host="0.0.0.0", port=port)  # Listen on all network interfaces
+        return jsonify({"message": "Model trained successfully!", "model_filename": model_filename}), 200
     except Exception as e:
-        logger.error(f"Script failed: {e}")
+        logger.error(f"Error during training: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/", methods=["GET"])
+def health_check():
+    """Health check endpoint."""
+    return jsonify({"status": "healthy"}), 200
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))  # Use PORT environment variable
+    app.run(host="0.0.0.0", port=port)
