@@ -49,7 +49,7 @@ jobs:
 
       - name: Save Model to Cloud Storage
         run: |
-          gsutil cp model.pkl gs://mlops-poc-bucket/models/
+          gsutil cp model.pkl gs://hosuing-data-bucket-poc/models/
 
       - name: Authenticate Docker to GCR
         run: |
