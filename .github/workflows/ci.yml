@@ -1,4 +1,4 @@
-name: CI - Train Model & Deploy to Cloud Run
+name: CI - Train Model & Deploy to Vertex AI
 
 on:
   push:
@@ -43,22 +43,33 @@ jobs:
       - name: Train the model
         run: python train_model.py
 
-      - name: Authenticate Docker to GCR
-        run: gcloud auth configure-docker
-
-      - name: Build and Push Docker Image
+      - name: Upload Model Artifacts to GCS
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest .
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest
+          gsutil cp model.pkl gs://housing-data-bucket-poc/model_registry/
 
-      - name: Deploy to Cloud Run
+      - name: Upload Model to Vertex AI Model Registry
         run: |
-          gcloud run deploy house-price-api \
-            --image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest \
+          gcloud ai models upload \
             --region=us-central1 \
-            --platform=managed \
-            --allow-unauthenticated
+            --display-name=house-price-model \
+            --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-0:latest \
+            --artifact-uri=gs://housing-data-bucket-poc/model_registry/
 
-      - name: Upload Model Artifacts to Model Registry
+      - name: Create Vertex AI Endpoint
         run: |
-          gsutil cp gs://housing-data-bucket-poc/models/* gs://housing-data-bucket-poc/model_registry/
+          gcloud ai endpoints create \
+            --region=us-central1 \
+            --display-name=house-price-endpoint
+
+      - name: Deploy Model to Vertex AI Endpoint
+        run: |
+          MODEL_ID=$(gcloud ai models list --region=us-central1 --filter=displayName:house-price-model --format="value(MODEL_ID)")
+          ENDPOINT_ID=$(gcloud ai endpoints list --region=us-central1 --filter=displayName:house-price-endpoint --format="value(ENDPOINT_ID)")
+
+          gcloud ai endpoints deploy-model $ENDPOINT_ID \
+            --region=us-central1 \
+            --model=$MODEL_ID \
+            --display-name=house-price-deployment \
+            --machine-type=n1-standard-4 \
+            --min-replica-count=1 \
+            --max-replica-count=1
