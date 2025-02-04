@@ -1,11 +1,3 @@
-name: CI - Train Model & Deploy to Vertex AI
-
-on:
-  push:
-    branches:
-      - master
-  workflow_dispatch:
-
 jobs:
   train_and_deploy:
     runs-on: ubuntu-latest
@@ -16,7 +8,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
+          credentials_json: ${{ secrets.GCP_CREDENTIAL_JSON }}
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -53,12 +45,16 @@ jobs:
           echo "Listing /tmp directory contents"
           ls -l /tmp  # Ensure the model file is here
 
-      - name: Upload Model Artifacts to GCS
+      - name: Check if MODEL_FILENAME is set
         run: |
           if [ -z "$MODEL_FILENAME" ]; then
             echo "ERROR: MODEL_FILENAME is empty. Check the training script output."
             exit 1
           fi
+          echo "MODEL_FILENAME is set to: $MODEL_FILENAME"  # Debugging line
+
+      - name: Upload Model Artifacts to GCS
+        run: |
           echo "Uploading model to GCS"
           gsutil cp /tmp/$MODEL_FILENAME gs://housing-data-bucket-poc/model_registry/
 
