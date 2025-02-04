@@ -1,7 +1,10 @@
 name: CD - Deploy Model to Vertex AI Endpoint
 
 on:
-  workflow_dispatch:
+    push:
+      branches:
+        - master
+    workflow_dispatch:
 
 jobs:
   deploy:
