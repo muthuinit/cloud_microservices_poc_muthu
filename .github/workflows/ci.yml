@@ -47,10 +47,6 @@ jobs:
         run: |
           python train_model.py
 
-      - name: Save Model to Cloud Storage
-        run: |
-          gsutil cp model.pkl gs://hosuing-data-bucket-poc/models/
-
       - name: Authenticate Docker to GCR
         run: |
           gcloud auth configure-docker
