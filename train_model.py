@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from google.cloud import bigquery, storage
 from google.api_core.exceptions import GoogleAPICallError
+from flask import Flask, request, jsonify
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +24,10 @@ BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "housing-data-bucket-poc")
 client_bq = bigquery.Client(project=PROJECT_ID)
 client_gcs = storage.Client(project=PROJECT_ID)
 
+# Initialize Flask app
+app = Flask(__name__)
+
+# Load data from BigQuery
 def load_data_from_bq():
     """Load housing data from BigQuery."""
     try:
@@ -38,6 +43,7 @@ def load_data_from_bq():
         logger.error(f"Failed to load data from BigQuery: {e}")
         raise
 
+# Train the model
 def train_model(data):
     """Train a RandomForestRegressor model."""
     try:
@@ -63,6 +69,7 @@ def train_model(data):
         logger.error(f"Failed to train model: {e}")
         raise
 
+# Save the trained model to Google Cloud Storage
 def save_model_to_gcs(model):
     """Save the trained model to Google Cloud Storage."""
     try:
@@ -80,8 +87,23 @@ def save_model_to_gcs(model):
         logger.error(f"Failed to save model to GCS: {e}")
         raise
 
-def main():
-    """Main function to train and save the model."""
+# Define prediction endpoint
+@app.route('/predict', methods=['POST'])
+def predict():
+    """Endpoint to make predictions using the trained model."""
+    if model is None:
+        return jsonify({"error": "Model not loaded"}), 500
+    
+    data = request.get_json(force=True)
+    size = data['size']
+    bedrooms = data['bedrooms']
+    
+    # Make prediction
+    prediction = model.predict([[size, bedrooms]])
+    return jsonify({"predicted_price": prediction[0]})
+
+# Main entry point
+if __name__ == "__main__":
     try:
         # Load data from BigQuery
         data = load_data_from_bq()
@@ -91,8 +113,9 @@ def main():
 
         # Save the trained model to Cloud Storage
         save_model_to_gcs(model)
+
+        # Start Flask app and bind to port 8080
+        port = int(os.environ.get("PORT", 8080))  # Default to 8080
+        app.run(host="0.0.0.0", port=port)  # Listen on all network interfaces
     except Exception as e:
         logger.error(f"Script failed: {e}")
-
-if __name__ == "__main__":
-    main()

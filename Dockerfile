@@ -3,7 +3,8 @@ FROM python:3.10-slim
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8080  # Cloud Run expects your app to listen on this port
 
 # Set working directory
 WORKDIR /app
@@ -17,5 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
-# Run the training script
-CMD ["python", "train_model.py"]
+# Expose the Cloud Run port
+EXPOSE 8080
+
+# Use Gunicorn to serve the Flask app in production mode
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "train_model:app"]
