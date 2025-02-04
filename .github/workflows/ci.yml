@@ -1,4 +1,4 @@
-name: CI - Train Model & Build Docker Image
+name: CI - Train Model & Deploy to Cloud Run
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  train_and_build:
+  train_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -51,13 +51,14 @@ jobs:
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest .
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest
 
-      - name: Deploy to Workbench for Testing
+      - name: Deploy to Cloud Run
         run: |
-           gcloud compute instances create-with-container workbench-qa-instance \
-            --container-image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest \
-            --zone=us-central1-b
+          gcloud run deploy house-price-api \
+            --image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/mlops-api:latest \
+            --region=us-central1 \
+            --platform=managed \
+            --allow-unauthenticated
 
       - name: Upload Model Artifacts to Model Registry
         run: |
-           gsutil cp gs://housing-data-bucket-poc/models/* gs://housing-data-bucket-poc/model_registry/
-
+          gsutil cp gs://housing-data-bucket-poc/models/* gs://housing-data-bucket-poc/model_registry/
