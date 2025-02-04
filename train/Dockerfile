@@ -1,5 +1,5 @@
 # Use the official Scikit-learn image from Vertex AI
-FROM gcr.io/deeplearning-platform-release/sklearn-cpu.2-6:latest
+FROM quentinfayet/scikit-learn:latest
 
 # Copy the training script and requirements
 COPY train_model.py /train_model.py
