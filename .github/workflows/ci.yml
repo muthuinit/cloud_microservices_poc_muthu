@@ -41,11 +41,14 @@ jobs:
           pip install db-dtypes
 
       - name: Train the model
-        run: python train_model.py
+        id: train
+        run: |
+          python train_model.py > train_output.txt
+          echo "MODEL_FILENAME=$(grep 'Model training completed. Saved as' train_output.txt | awk '{print $NF}')" >> $GITHUB_ENV
 
       - name: Upload Model Artifacts to GCS
         run: |
-          gsutil cp model.pkl gs://housing-data-bucket-poc/model_registry/
+          gsutil cp /tmp/$MODEL_FILENAME gs://housing-data-bucket-poc/model_registry/
 
       - name: Upload Model to Vertex AI Model Registry
         run: |
