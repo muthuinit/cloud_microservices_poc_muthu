@@ -45,9 +45,18 @@ jobs:
         run: |
           python train_model.py > train_output.txt
           echo "MODEL_FILENAME=$(grep 'Model training completed. Saved as' train_output.txt | awk '{print $NF}')" >> $GITHUB_ENV
+          echo "Captured MODEL_FILENAME: $MODEL_FILENAME"  # Debugging line
+
+      - name: Debug - List /tmp directory
+        run: |
+          ls -l /tmp
 
       - name: Upload Model Artifacts to GCS
         run: |
+          if [ -z "$MODEL_FILENAME" ]; then
+            echo "ERROR: MODEL_FILENAME is empty. Check the training script output."
+            exit 1
+          fi
           gsutil cp /tmp/$MODEL_FILENAME gs://housing-data-bucket-poc/model_registry/
 
       - name: Upload Model to Vertex AI Model Registry
