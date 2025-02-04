@@ -1,17 +1,58 @@
-name: CI - Train Model & Deploy to Vertex AI
+name: CI - QA Validations and Training
 
 on:
-  push:
-    branches:
-      - master
   workflow_dispatch:
 
 jobs:
-  train_and_deploy:
+  lint:
+    name: "Linting"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install flake8
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flake8
+      
+      - name: Run flake8
+        run: python -m flake8 .
+
+  test:
+    name: "Testing"
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          pip install -r train/requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: |
+          python -m pytest tests/ --verbose
+
+  train:
+    name: "Train Model with Vertex AI Custom Job"
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
@@ -23,44 +64,19 @@ jobs:
         with:
           project_id: sixth-utility-449722-p8
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-
-      - name: Install dependencies
+      - name: Build and Push Docker Image
         run: |
-          pip install -r requirements.txt
-          pip install google-cloud-storage google-cloud-bigquery scikit-learn joblib
-          pip install db-dtypes
+          cd train
+          gcloud auth configure-docker
+          docker build -t gcr.io/sixth-utility-449722-p8/house-price-training:latest .
+          docker push gcr.io/sixth-utility-449722-p8/house-price-training:latest
 
-      - name: Train the model
+      - name: Submit Custom Training Job to Vertex AI
         run: |
-          python train_model.py
-
-      - name: Upload Model to Vertex AI Model Registry
-        run: |
-          gcloud ai models upload \
+          gcloud ai custom-jobs create \
+            --display-name=house-price-training \
             --region=us-central1 \
-            --display-name=house-price-model \
-            --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-0:latest \
-            --artifact-uri=gs://housing-data-bucket-poc/model_registry/model.pkl
-
-      - name: Create Vertex AI Endpoint
-        run: |
-          gcloud ai endpoints create \
-            --region=us-central1 \
-            --display-name=house-price-endpoint
-
-      - name: Deploy Model to Vertex AI Endpoint
-        run: |
-          MODEL_ID=$(gcloud ai models list --region=us-central1 --filter=displayName:house-price-model --format="value(MODEL_ID)")
-          ENDPOINT_ID=$(gcloud ai endpoints list --region=us-central1 --filter=displayName:house-price-endpoint --format="value(ENDPOINT_ID)")
-
-          gcloud ai endpoints deploy-model $ENDPOINT_ID \
-            --region=us-central1 \
-            --model=$MODEL_ID \
-            --display-name=house-price-deployment \
-            --machine-type=n1-standard-4 \
-            --min-replica-count=1 \
-            --max-replica-count=1
+            --project=sixth-utility-449722-p8 \
+            --service-account=muthuwings2poc@sixth-utility-449722-p8.iam.gserviceaccount.com \
+            --worker-pool-spec=replica-count=1,machine-type=n1-standard-4,container-image-uri=gcr.io/sixth-utility-449722-p8/house-price-training:latest \
+            --args="--project=sixth-utility-449722-p8,--region=us-central1,--model-dir=gs://housing-data-bucket-poc/model_registry/"

@@ -1,20 +1,13 @@
-# Use Python base image
-FROM python:3.10-slim
+# Use the official Scikit-learn image from Vertex AI
+FROM us-docker.pkg.dev/vertex-ai/training/scikit-learn-cpu.1-0:latest
 
-# Set working directory
-WORKDIR /app
-
-# Copy dependencies
-COPY requirements.txt .
+# Copy the training script and requirements
+COPY train_model.py /train_model.py
+COPY requirements.txt /requirements.txt
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r /requirements.txt
 
-# Copy application files
-COPY . .
-
-# Expose the application port
-EXPOSE 8080
-
-# Run the application
-CMD ["python", "train_model.py"]
+# Set the entrypoint
+ENTRYPOINT ["python", "/train_model.py"]

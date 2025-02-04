@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
-from google.cloud import bigquery, storage
+from google.cloud import storage
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
@@ -13,40 +13,39 @@ logger = logging.getLogger(__name__)
 
 # Environment Variables
 PROJECT_ID = "sixth-utility-449722-p8"
-DATASET_ID = "housing_data"
-TABLE_ID = "housing_table"
 BUCKET_NAME = "housing-data-bucket-poc"
 MODEL_DIR = "/tmp"
 MODEL_PATH = f"{MODEL_DIR}/model.pkl"
 
-# Initialize Clients
-client_bq = bigquery.Client()
+# Initialize GCS Client
 client_gcs = storage.Client()
 
-def load_data_from_bq():
-    """Load housing data from BigQuery."""
-    query = f"""
-        SELECT size, bedrooms, price
-        FROM `{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}`
-    """
-    try:
-        logger.info(f"Loading data from BigQuery table: {TABLE_ID}")
-        return client_bq.query(query).to_dataframe()
-    except Exception as e:
-        logger.error(f"BigQuery Data Load Error: {e}")
-        raise
+def train_model():
+    """Train a simple RandomForestRegressor model."""
+    # Sample data
+    data = {
+        "size": [1000, 1500, 2000, 2500, 3000],
+        "bedrooms": [2, 3, 4, 4, 5],
+        "price": [300000, 400000, 500000, 550000, 600000],
+    }
+    df = pd.DataFrame(data)
 
-def train_model(data):
-    """Train a RandomForestRegressor model."""
-    X = data[["size", "bedrooms"]]
-    y = data["price"]
+    # Features and target
+    X = df[["size", "bedrooms"]]
+    y = df["price"]
+
+    # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
+
+    # Train model
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
+
+    # Evaluate model
     y_pred = model.predict(X_test)
     mse = mean_squared_error(y_test, y_pred)
     logger.info(f"Model Trained - MSE: {mse}")
+
     return model
 
 def save_model_to_gcs(model):
@@ -61,6 +60,5 @@ def save_model_to_gcs(model):
     logger.info(f"Model saved to GCS: gs://{BUCKET_NAME}/model_registry/model.pkl")
 
 if __name__ == "__main__":
-    data = load_data_from_bq()
-    model = train_model(data)
+    model = train_model()
     save_model_to_gcs(model)
