@@ -1,72 +1,98 @@
 import os
+import logging
 import joblib
 import pandas as pd
+from datetime import datetime
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from google.cloud import bigquery, storage
+from google.api_core.exceptions import GoogleAPICallError
 
-# Initialize BigQuery client
-client_bq = bigquery.Client()
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Initialize Cloud Storage client
-client_gcs = storage.Client()
+# Load environment variables
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "sixth-utility-449722-p8")
+DATASET_ID = os.getenv("BQ_DATASET_ID", "housing_data")
+TABLE_ID = os.getenv("BQ_TABLE_ID", "housing_table")
+BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "housing-data-bucket-poc")
 
-# Define the BigQuery dataset and table
-dataset_id = "sixth-utility-449722-p8.housing_data"
-table_id = f"{dataset_id}.housing_table"
+# Initialize BigQuery and GCS clients
+client_bq = bigquery.Client(project=PROJECT_ID)
+client_gcs = storage.Client(project=PROJECT_ID)
 
-# Define the Cloud Storage bucket name
-bucket_name = "housing-data-bucket-poc"
-
-# Load data from BigQuery
 def load_data_from_bq():
-    query = f"""
-        SELECT size, bedrooms, price
-        FROM `{table_id}`
-    """
-    # Query the BigQuery table and return the result as a pandas DataFrame
-    data = client_bq.query(query).to_dataframe()
-    return data
+    """Load housing data from BigQuery."""
+    try:
+        query = f"""
+            SELECT size, bedrooms, price
+            FROM `{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}`
+        """
+        logger.info(f"Loading data from BigQuery: {PROJECT_ID}.{DATASET_ID}.{TABLE_ID}")
+        data = client_bq.query(query).to_dataframe()
+        logger.info(f"Successfully loaded {len(data)} rows.")
+        return data
+    except GoogleAPICallError as e:
+        logger.error(f"Failed to load data from BigQuery: {e}")
+        raise
 
-# Train the model
-def train_model():
-    data = load_data_from_bq()
-    
-    # Define features (X) and target (y)
-    X = data[["size", "bedrooms"]]
-    y = data["price"]
+def train_model(data):
+    """Train a RandomForestRegressor model."""
+    try:
+        # Define features (X) and target (y)
+        X = data[["size", "bedrooms"]]
+        y = data["price"]
 
-    # Split the data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Initialize and train the RandomForestRegressor model
-    model = RandomForestRegressor()
-    model.fit(X_train, y_train)
+        # Initialize and train the RandomForestRegressor model
+        logger.info("Training RandomForestRegressor model...")
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
+        model.fit(X_train, y_train)
 
-    # Evaluate the model
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    print(f"Model training completed. MSE: {mse}")
+        # Evaluate the model
+        y_pred = model.predict(X_test)
+        mse = mean_squared_error(y_test, y_pred)
+        logger.info(f"Model training completed. MSE: {mse}")
 
-    return model
+        return model
+    except Exception as e:
+        logger.error(f"Failed to train model: {e}")
+        raise
 
-# Save the trained model to Google Cloud Storage
 def save_model_to_gcs(model):
-    # Save the trained model to a local file
-    joblib.dump(model, "model.pkl")
-    
-    # Upload the model file to Google Cloud Storage
-    bucket = client_gcs.bucket(bucket_name)
-    blob = bucket.blob("models/model.pkl")
-    blob.upload_from_filename("model.pkl")
-    
-    print(f"Model successfully saved to GCS at gs://{bucket_name}/models/model.pkl")
+    """Save the trained model to Google Cloud Storage."""
+    try:
+        # Save the trained model to a local file
+        model_filename = f"model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pkl"
+        joblib.dump(model, model_filename)
 
-# Main function to train and save the model
+        # Upload the model file to Google Cloud Storage
+        bucket = client_gcs.bucket(BUCKET_NAME)
+        blob = bucket.blob(f"models/{model_filename}")
+        blob.upload_from_filename(model_filename)
+
+        logger.info(f"Model successfully saved to GCS at gs://{BUCKET_NAME}/models/{model_filename}")
+    except GoogleAPICallError as e:
+        logger.error(f"Failed to save model to GCS: {e}")
+        raise
+
+def main():
+    """Main function to train and save the model."""
+    try:
+        # Load data from BigQuery
+        data = load_data_from_bq()
+
+        # Train the model
+        model = train_model(data)
+
+        # Save the trained model to Cloud Storage
+        save_model_to_gcs(model)
+    except Exception as e:
+        logger.error(f"Script failed: {e}")
+
 if __name__ == "__main__":
-    # Train the model
-    model = train_model()
-
-    # Save the trained model to Cloud Storage
-    save_model_to_gcs(model)
+    main()
