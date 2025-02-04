@@ -31,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r train/requirements.txt
 
       - name: Build and Push Docker Image
         run: |
