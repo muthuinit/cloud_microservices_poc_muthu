@@ -11,7 +11,7 @@ LOCAL_MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
 # Ensure directory exists
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-# Sample training data (use your actual data here)
+# Sample training data (replace with your actual data)
 X_train = [[1, 2], [2, 3], [3, 4], [4, 5]]
 y_train = [10, 20, 30, 40]
 
@@ -19,7 +19,7 @@ y_train = [10, 20, 30, 40]
 model = xgb.XGBRegressor(n_estimators=100)
 model.fit(X_train, y_train)
 
-# Save the model inside the correct directory
+# Save the model as model.bst (XGBoost format)
 model.save_model(LOCAL_MODEL_PATH)
 print(f"✅ Model saved locally at: {LOCAL_MODEL_PATH}")
 
