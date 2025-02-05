@@ -32,11 +32,18 @@ jobs:
             --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-2:latest \
             --artifact-uri=gs://housing-data-bucket-poc/model_registry/
 
-      - name: Create Vertex AI Endpoint
+      - name: Create Vertex AI Endpoint (if not exists)
         run: |
-          gcloud ai endpoints create \
-            --region=us-central1 \
-            --display-name=house-price-endpoint
+          ENDPOINT_ID=$(gcloud ai endpoints list --region=us-central1 --filter="displayName=house-price-endpoint" --format="value(ENDPOINT_ID)" | head -n 1)
+
+          if [ -z "$ENDPOINT_ID" ]; then
+              echo "Creating endpoint..."
+              gcloud ai endpoints create \
+                --region=us-central1 \
+                --display-name=house-price-endpoint
+          else
+              echo "Endpoint already exists: $ENDPOINT_ID"
+          fi
 
       - name: Deploy Model to Vertex AI Endpoint
         run: |
