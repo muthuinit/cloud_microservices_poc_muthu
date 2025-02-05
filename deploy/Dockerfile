@@ -1,16 +1,11 @@
-# Use an official Python image
-FROM python:3.9-slim
+FROM python:3.10-slim
 
-# Install dependencies
-RUN pip install --upgrade pip && \
-    pip install scikit-learn==1.0.2 google-cloud-storage flask
+WORKDIR /app
 
-# Create a directory for the model
-RUN mkdir -p /model
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the model serving script and model file
-COPY serve.py /serve.py
-COPY model.pkl /model/model.pkl
+COPY model.pkl .
+COPY app.py .
 
-# Set the entrypoint
-ENTRYPOINT ["python", "/serve.py"]
+CMD ["python", "app.py"]
