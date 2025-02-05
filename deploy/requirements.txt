@@ -1,6 +1,5 @@
-google-cloud-storage
-scikit-learn
-joblib
-pandas
 flask
 gunicorn
+scikit-learn==1.0.2
+google-cloud-storage
+
