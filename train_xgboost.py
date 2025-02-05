@@ -19,7 +19,7 @@ y_train = [10, 20, 30, 40]
 model = xgb.XGBRegressor(n_estimators=100)
 model.fit(X_train, y_train)
 
-# Save the model as model.bst
+# Save the model inside the correct directory
 model.save_model(LOCAL_MODEL_PATH)
 print(f"✅ Model saved locally at: {LOCAL_MODEL_PATH}")
 
