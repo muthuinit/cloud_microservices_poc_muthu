@@ -5,7 +5,7 @@ import numpy as np
 
 app = FastAPI()
 
-# Load model
+# Load the model
 with open("model.pkl", "rb") as f:
     model = pickle.load(f)
 
@@ -18,8 +18,8 @@ def predict(size: float, bedrooms: int):
     prediction = model.predict(np.array([[size, bedrooms]]))
     return {"predicted_price": prediction[0]}
 
-# Explicitly listen on PORT 8080 for Cloud Run
+# Ensure the app listens on the correct port
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8080))  # Get PORT from env variable (default 8080)
+    port = int(os.getenv("PORT", 8080))  # Default to 8080 for Cloud Run
     uvicorn.run(app, host="0.0.0.0", port=port)
