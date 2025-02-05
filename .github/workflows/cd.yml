@@ -26,12 +26,12 @@ jobs:
 
       - name: Download Model from GCS
         run: |
-          gsutil cp gs://housing-data-bucket-poc/model_registry/model.pkl model.pkl
+          gsutil cp gs://housing-data-bucket-poc/model_registry/model.pkl deploy/model.pkl
 
       - name: Build and Push Docker Image
         run: |
           gcloud auth configure-docker --quiet
-          docker build -t gcr.io/sixth-utility-449722-p8/house-price-api:latest .
+          docker build -t gcr.io/sixth-utility-449722-p8/house-price-api:latest ./deploy
           docker push gcr.io/sixth-utility-449722-p8/house-price-api:latest
 
       - name: Deploy Model API to Cloud Run
