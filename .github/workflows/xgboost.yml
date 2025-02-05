@@ -11,7 +11,7 @@ jobs:
     name: "Train and Deploy XGBoost Model"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Authenticate to Google Cloud
@@ -31,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install xgboost numpy scikit-learn
+          pip install xgboost numpy scikit-learn google-cloud-storage
 
       - name: Train XGBoost Model
         run: |
@@ -39,7 +39,7 @@ jobs:
 
       - name: Upload Model to GCS
         run: |
-          gsutil cp model.bst gs://housing-data-bucket-poc/model_registry/
+          gsutil cp model.bst gs://housing-data-bucket-poc/model_registry/model.bst
 
       - name: Upload Model to Vertex AI Model Registry
         run: |
@@ -47,13 +47,20 @@ jobs:
             --region=us-central1 \
             --display-name=house-price-xgb-model \
             --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/xgboost-cpu.1-3:latest \
-            --artifact-uri=gs://housing-data-bucket-poc/model_registry/
+            --artifact-uri=gs://housing-data-bucket-poc/model_registry/model.bst
 
-      - name: Create Vertex AI Endpoint
+      - name: Check if Vertex AI Endpoint Exists
         run: |
-          gcloud ai endpoints create \
-            --region=us-central1 \
-            --display-name=house-price-endpoint
+          ENDPOINT_ID=$(gcloud ai endpoints list --region=us-central1 --filter="displayName=house-price-endpoint" --format="value(name)" | head -n 1)
+
+          if [ -z "$ENDPOINT_ID" ]; then
+              echo "Creating new endpoint..."
+              gcloud ai endpoints create \
+                --region=us-central1 \
+                --display-name=house-price-endpoint
+          else
+              echo "Endpoint already exists: $ENDPOINT_ID"
+          fi
 
       - name: Deploy Model to Vertex AI Endpoint
         run: |
