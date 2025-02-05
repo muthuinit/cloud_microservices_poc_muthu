@@ -5,7 +5,7 @@ FROM python:3.9-slim
 RUN pip install --upgrade pip && \
     pip install scikit-learn==1.0.2 google-cloud-storage flask
 
-# Install gcloud CLI (for gsutil)
+# Install Google Cloud SDK (for gsutil)
 RUN apt-get update && \
     apt-get install -y curl && \
     curl -sSL https://sdk.cloud.google.com | bash && \
