@@ -1,11 +1,11 @@
-name: Deploy and Serve Model from Vertex AI
+name: CD - Deploy Model to Vertex AI Endpoint
 
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
-
+    
 jobs:
   deploy:
     name: "Deploy Model to Vertex AI"
@@ -22,36 +22,21 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}  # Make sure to set your project ID in Secrets
+          project_id: sixth-utility-449722-p8
 
       - name: Upload Model to Vertex AI Model Registry
         run: |
-          PROJECT_ID="sixth-utility-449722-p8"
-          REGION="us-central1"
-          IMAGE_URI="gcr.io/sixth-utility-449722-p8/custom-sklearn-image:latest"  # Container image URI for the scikit-learn model
-          MODEL_NAME="house-price-model"
-          BUCKET_NAME="housing-data-bucket-poc"
-          
-          # Upload model to Vertex AI Model Registry
           gcloud ai models upload \
-            --region=$REGION \
-            --display-name=$MODEL_NAME \
-            --container-image-uri=$IMAGE_URI \
-            --artifact-uri=gs://$BUCKET_NAME/model_registry/
+            --region=us-central1 \
+            --display-name=house-price-model \
+            --container-image-uri=us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-2:latest \
+            --artifact-uri=gs://housing-data-bucket-poc/model_registry/
 
-      - name: Check if Endpoint Exists and Create if Necessary
+      - name: Create Vertex AI Endpoint
         run: |
-          ENDPOINT_NAME="house-price-endpoint"
-          ENDPOINT_ID=$(gcloud ai endpoints list --region=us-central1 --filter="displayName=$ENDPOINT_NAME" --limit=1 --format="value(name)")
-          
-          if [ -z "$ENDPOINT_ID" ]; then
-              echo "Creating new endpoint..."
-              gcloud ai endpoints create \
-                --region=us-central1 \
-                --display-name=$ENDPOINT_NAME
-          else
-              echo "Endpoint already exists: $ENDPOINT_ID"
-          fi
+          gcloud ai endpoints create \
+            --region=us-central1 \
+            --display-name=house-price-endpoint
 
       - name: Deploy Model to Vertex AI Endpoint
         run: |
@@ -61,11 +46,10 @@ jobs:
           echo "MODEL_ID: $MODEL_ID"
           echo "ENDPOINT_ID: $ENDPOINT_ID"
 
-          # Deploy model to endpoint
           gcloud ai endpoints deploy-model $ENDPOINT_ID \
             --region=us-central1 \
             --model=$MODEL_ID \
             --display-name=house-price-deployment \
-            --machine-type=n1-standard-4 \
+            --machine-type=n1-standard-8 \
             --min-replica-count=1 \
             --max-replica-count=1
