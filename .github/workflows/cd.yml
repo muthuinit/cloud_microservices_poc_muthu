@@ -24,6 +24,10 @@ jobs:
         with:
           project_id: sixth-utility-449722-p8
 
+      - name: Download Model from GCS
+        run: |
+            gsutil cp gs://housing-data-bucket-poc/model_registry/model.pkl deploy/model.pkl
+
       - name: Build and Push Docker Image
         run: |
             cd deploy
